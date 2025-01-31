@@ -15,7 +15,12 @@ class _TaskPageState extends State<TaskPage> {
         title: const Text('Title'),
       ),
       body: Center(
-        child: Text("Another Page"),
+        child: GestureDetector(
+          onTap: () {
+            Navigator.of(context).pop();
+          },
+          child: Text("Another Page"),
+        ),
       ),
     );
   }
