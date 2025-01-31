@@ -2,27 +2,17 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:to_do/model_jsons/task_page.dart';
+import 'package:to_do/models/task_model.dart';
 
 class ToDoListItem extends StatelessWidget {
-  final String id;
-  final String title;
-  final String? description;
-  final String status;
-  final String createdDate;
-  final String? dueDate;
-  final String userId;
+  final Task task;
+
   final Function(bool) onStatusChange;
   final Function() onDelete;
 
   const ToDoListItem({
     super.key,
-    required this.id,
-    required this.title,
-    this.description,
-    required this.status,
-    required this.createdDate,
-    this.dueDate,
-    required this.userId,
+    required this.task,
     required this.onStatusChange,
     required this.onDelete,
   });
@@ -31,12 +21,12 @@ class ToDoListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: () {
-        log("clicked on item $id");
+        log("clicked on item $task.id");
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (context) => TaskPage()));
       },
       leading: Checkbox(
-          value: status == "complete",
+          value: task.status == "complete",
           onChanged: (val) {
             onStatusChange(val ?? false);
           }),
@@ -44,7 +34,7 @@ class ToDoListItem extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              title,
+              task.title,
               style: const TextStyle(fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
               //maxLines: 1,
@@ -58,7 +48,7 @@ class ToDoListItem extends StatelessWidget {
         ],
       ),
       subtitle: Text(
-        description ?? "No Description",
+        task.description ?? "No Description",
         overflow: TextOverflow.ellipsis,
         maxLines: 2,
       ),
