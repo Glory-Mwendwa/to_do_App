@@ -1,18 +1,54 @@
+import 'dart:convert';
 import 'dart:developer';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:to_do/controllers/auth_controller.dart';
+import 'package:to_do/model_jsons/firebase/fire_base_api.dart';
 import 'package:to_do/models/task_model.dart';
+import 'package:to_do/pages/my_account_page.dart';
 import 'package:to_do/widgets/todo_list_item.dart';
+import 'package:uuid/uuid.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  User? user = FirebaseAuth.instance.currentUser;
   List<Task> toDoItems = [];
+  final AuthController authController = Get.find();
+  DateTime? pickedDate;
+  void initState() {
+    super.initState();
+    log("Message been initialized");
+    loadTasks();
+  }
+
+  void loadTasks() async {
+    final String jsonString = await rootBundle.loadString('assets/tasks.json');
+    final List<dynamic> taskList = json.decode(jsonString);
+    log('taskList:$taskList');
+
+    List<Task> tasks = taskList.map((e) => Task.fromMap(e)).toList();
+
+    setState(() {
+      toDoItems = tasks;
+    });
+  }
+
+  void onSave(Task t) {
+    log("saving task: ${t.toJson()}");
+    int index = toDoItems.indexWhere((e) => e.id == t.id);
+    setState(() {
+      toDoItems[index] = t;
+    });
+  }
 
   void onItemStatusChange(String id, bool val) {
     log("item $id status changed to $val ");
@@ -23,13 +59,13 @@ class _HomePageState extends State<HomePage> {
 
     if (index != -1) {
       setState(() {
-        toDoItems[index].status = newStatus;
+        t.status = newStatus;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("The task is $newStatus"),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: newStatus == "complete" ? Colors.green : Colors.redAccent,
         ),
       );
     }
@@ -48,7 +84,6 @@ class _HomePageState extends State<HomePage> {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final dueDateController = TextEditingController();
-    final userIdController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -66,7 +101,6 @@ class _HomePageState extends State<HomePage> {
             builder: (BuildContext context, StateSetter setModalState) {
               return Form(
                 key: formKey,
-                //autovalidateMode: AutovalidateMode.always,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -77,8 +111,8 @@ class _HomePageState extends State<HomePage> {
                         if (value == null || value.trim().isEmpty) {
                           return "Title cannot be empty";
                         }
-                        if (value.length > 5) {
-                          return "Title cannot exceed 5 characters";
+                        if (value.length > 50) {
+                          return "Title cannot exceed 50 characters";
                         }
                         return null;
                       },
@@ -86,8 +120,7 @@ class _HomePageState extends State<HomePage> {
                     TextFormField(
                       controller: descriptionController,
                       maxLines: 3,
-                      decoration:
-                          const InputDecoration(labelText: "Description"),
+                      decoration: const InputDecoration(labelText: "Description"),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -97,55 +130,37 @@ class _HomePageState extends State<HomePage> {
                         ),
                         ElevatedButton(
                           onPressed: () async {
-                            DateTime? pickedDate = await showDatePicker(
+                            pickedDate = await showDatePicker(
                               context: context,
                               initialDate: DateTime.now(),
-                              firstDate: DateTime.now()
-                                  .subtract(const Duration(days: 365)),
-                              lastDate:
-                                  DateTime.now().add(const Duration(days: 365)),
+                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
                             );
-
-                            if (pickedDate != null) {
-                              String formattedPickDate =
-                                  DateFormat.yMd().format(pickedDate);
-
-                              setModalState(() {
-                                dueDateController.text = formattedPickDate;
-                              });
-                            }
                           },
                           child: const Text("Select Date"),
                         ),
                       ],
                     ),
-                    TextFormField(
-                      controller: userIdController,
-                      decoration: const InputDecoration(labelText: "User ID"),
-                    ),
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (formKey.currentState!.validate()) {
                           String title = titleController.text.trim();
-                          String description =
-                              descriptionController.text.trim();
-                          String dueDate = dueDateController.text.trim();
-                          String userId = userIdController.text.trim();
-                          String createdDate =
-                              "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}";
+                          String description = descriptionController.text.trim();
+                          DateTime createdDate = DateTime.now();
 
-                          /* setState(() {
-                            toDoItems.add({
-                              "id": (toDoItems.length + 1).toString(),
-                              "title": title,
-                              "description":
-                                  description.isEmpty ? null : description,
-                              "status": "incomplete",
-                              "createdDate": createdDate,
-                              "dueDate": dueDate.isEmpty ? null : dueDate,
-                              "userId": userId,
-                            });
-                          }); */
+                          Task newTask = Task(
+                            id: Uuid().v4(),
+                            title: title,
+                            description: description,
+                            status: "incomplete",
+                            createdDate: createdDate,
+                            dueDate: pickedDate,
+                          );
+
+                          Task savedTask = await FirebaseApis.uploadMyTask(newTask);
+                          setState(() {
+                            toDoItems.add(savedTask);
+                          });
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -173,18 +188,85 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Your To Do List"),
+        title: Text("Hello! ${user?.displayName!.split(" ").first ?? "User"}"),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: PopupMenuButton(
+              onSelected: (value) {
+                if (value == 'My Account') {
+                  Get.to(() => MyAccountPage());
+                } else if (value == 'logout') {
+                  showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text(
+                            "Sign Out",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          content: const Text(
+                            "Are you sure you want to sign out?",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text(
+                                "Cancel",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                authController.signOut();
+                                Get.offAllNamed('/login'); // Redirect to login page
+                              },
+                              child: const Text(
+                                "Yes",
+                              ),
+                            )
+                          ],
+                        );
+                      });
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'My Account',
+                  child: Text("My Account"),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Text("Log Out"),
+                ),
+              ],
+              child: CircleAvatar(
+                radius: 20,
+                backgroundImage: user?.photoURL != null ? CachedNetworkImageProvider(user!.photoURL!) : null,
+                child: user?.photoURL == null ? const Icon(Icons.person, size: 20) : null,
+              ),
+            ),
+          ),
+        ],
       ),
       body: ListView(
         children: toDoItems
             .map(
               (item) => ToDoListItem(
                 task: item,
-                onStatusChange: (bool val) {
-                  onItemStatusChange(item.id, val);
+                onStatusChange: (String id, bool val) {
+                  onItemStatusChange(item.id!, val);
                 },
                 onDelete: () {
-                  onItemDelete(item.id);
+                  onItemDelete(item.id!);
+                },
+                onSave: (t) {
+                  onSave(t);
                 },
               ),
             )

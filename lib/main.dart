@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:to_do/pages/home_page.dart';
+import 'package:get/get.dart';
+import 'package:to_do/controllers/auth_controller.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:to_do/pages/sign_in_page.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -11,8 +20,9 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
+    Get.put(AuthController());
+    return GetMaterialApp(
+      title: 'Smokeless-to-do',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -32,7 +42,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: HomePage(),
+      home: const SignInPage(),
     );
   }
 }

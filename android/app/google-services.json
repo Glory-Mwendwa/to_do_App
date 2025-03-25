@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "508906091320",
+    "project_id": "smokeless-to-do-729b4",
+    "storage_bucket": "smokeless-to-do-729b4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508906091320:android:e75bec65c91e2a6f2dc7cd",
+        "android_client_info": {
+          "package_name": "com.example.to_do"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQLURMIZ3NKiORl2pHc-VfmNgAx62XCxQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "1",
+    "title": "Flying to Paris",
+    "description": "Description 1",
+    "status": "complete",
+    "createdDate": "2025-02-04T10:54:59.645014",
+    "dueDate": null,
+    "userId": "100"
+  },
+  {
+    "id": "2",
+    "title": "Attend the Board meetings",
+    "description": null,
+    "status": "complete",
+    "createdDate": "2025-02-04T10:54:59.645014",
+    "dueDate": null,
+    "userId": "100"
+  },
+  {
+    "id": "3",
+    "title": "Attend Yoga Classes",
+    "description": "I need to visit the market and purchase Yoga pants. The classes start early today.",
+    "status": "incomplete",
+    "createdDate": "2025-02-04T10:54:59.645014",
+    "dueDate": "2025-02-04T10:54:59.645014",
+    "userId": "100"
+  },
+  {
+    "id": "4",
+    "title": "Fold the Laundry",
+    "description": "Description 4",
+    "status": "complete",
+    "createdDate": "2025-02-04T10:54:59.645014",
+    "dueDate": null,
+    "userId": "100"
+  },
+  {
+    "id": "5",
+    "title": "Finish up on reading",
+    "description": null,
+    "status": "incomplete",
+    "createdDate": "2025-02-04T10:54:59.645014",
+    "dueDate": "2025-02-04T10:54:59.645014",
+    "userId": "100"
+  }
+]
