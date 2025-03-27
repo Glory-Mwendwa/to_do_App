@@ -13,7 +13,7 @@ class FirebaseApis {
       throw "User not found";
     }
     task.uid = authController.user.value!.uid;
-    DocumentReference ref = db.collection("task").doc();
+    DocumentReference ref = db.collection("tasks").doc();
     task.id = ref.id;
     await ref.set(task.toJson(firebaseFormat: true)).then((v) => log("Upload task ${task.id}: ${task.title}"));
 

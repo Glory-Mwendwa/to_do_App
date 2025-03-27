@@ -1,19 +1,17 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:to_do/controllers/auth_controller.dart';
-import 'package:to_do/model_jsons/firebase/fire_base_api.dart';
+import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/models/task_model.dart';
 import 'package:to_do/pages/my_account_page.dart';
 import 'package:to_do/widgets/todo_list_item.dart';
 import 'package:uuid/uuid.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({super.key});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -21,41 +19,34 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   User? user = FirebaseAuth.instance.currentUser;
-  List<Task> toDoItems = [];
   final AuthController authController = Get.find();
   DateTime? pickedDate;
+
+  late TaskController taskController;
+
   void initState() {
     super.initState();
     log("Message been initialized");
-    loadTasks();
+    taskController = Get.put(TaskController(), permanent: true);
   }
 
-  void loadTasks() async {
-    final String jsonString = await rootBundle.loadString('assets/tasks.json');
-    final List<dynamic> taskList = json.decode(jsonString);
-    log('taskList:$taskList');
-
-    List<Task> tasks = taskList.map((e) => Task.fromMap(e)).toList();
-
+  void onSave(Task updatedTask) async {
+    log("saving task: ${updatedTask.toJson()}");
+    int index = taskController.tasks.indexWhere((e) => e.id == updatedTask.id);
     setState(() {
-      toDoItems = tasks;
+      taskController.tasks[index] = updatedTask;
     });
+    await taskController.updateTask(updatedTask);
   }
 
-  void onSave(Task t) {
-    log("saving task: ${t.toJson()}");
-    int index = toDoItems.indexWhere((e) => e.id == t.id);
-    setState(() {
-      toDoItems[index] = t;
-    });
-  }
-
-  void onItemStatusChange(String id, bool val) {
+  void onItemStatusChange(String id, bool val) async {
     log("item $id status changed to $val ");
     String newStatus = val ? "complete" : "incomplete";
-    int index = toDoItems.indexWhere((e) => e.id == id);
-    Task t = toDoItems[index];
+    int index = taskController.tasks.indexWhere((e) => e.id == id);
+    Task t = taskController.tasks[index];
     t.status = newStatus;
+
+    taskController.changeStatus(id, val);
 
     if (index != -1) {
       setState(() {
@@ -71,12 +62,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void onItemDelete(String id) {
-    log("item $id deleted ");
-
-    setState(() {
-      toDoItems.removeWhere((e) => e.id == id);
-    });
+  void onItemDelete(String taskId) async {
+    await taskController.deleteTask(taskId);
+    taskController.tasks.removeWhere((task) => task.id == taskId);
   }
 
   void addNewTask() {
@@ -157,10 +145,7 @@ class _HomePageState extends State<HomePage> {
                             dueDate: pickedDate,
                           );
 
-                          Task savedTask = await FirebaseApis.uploadMyTask(newTask);
-                          setState(() {
-                            toDoItems.add(savedTask);
-                          });
+                          await taskController.uploadMyTask(newTask);
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -254,24 +239,28 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: ListView(
-        children: toDoItems
-            .map(
-              (item) => ToDoListItem(
-                task: item,
-                onStatusChange: (String id, bool val) {
-                  onItemStatusChange(item.id!, val);
-                },
-                onDelete: () {
-                  onItemDelete(item.id!);
-                },
-                onSave: (t) {
-                  onSave(t);
-                },
-              ),
-            )
-            .toList(),
-      ),
+      body: GetX<TaskController>(
+          init: TaskController(),
+          builder: (tasksController) {
+            return ListView(
+              children: tasksController.tasks
+                  .map(
+                    (item) => ToDoListItem(
+                      task: item,
+                      onStatusChange: (String id, bool val) {
+                        onItemStatusChange(item.id!, val);
+                      },
+                      onDelete: () {
+                        onItemDelete(item.id!);
+                      },
+                      onSave: (t) {
+                        onSave(t);
+                      },
+                    ),
+                  )
+                  .toList(),
+            );
+          }),
       floatingActionButton: FloatingActionButton(
         onPressed: () => addNewTask(),
         child: const Icon(Icons.add),

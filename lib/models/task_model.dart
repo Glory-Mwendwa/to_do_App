@@ -21,13 +21,20 @@ class Task {
 
   factory Task.fromMap(Map<String, dynamic> json) {
     return Task(
-        id: json["id"],
-        title: json["title"],
-        description: json["description"],
-        status: json["status"],
-        createdDate: DateTime.parse(json["createdDate"]),
-        dueDate: json["dueDate"] == null ? null : DateTime.tryParse(json["dueDate"]),
-        uid: json["userId"]);
+      id: json["id"],
+      title: json["title"],
+      description: json["description"],
+      status: json["status"],
+      createdDate: json["createdDate"] is Timestamp
+          ? (json["createdDate"] as Timestamp).toDate()
+          : DateTime.parse(json["createdDate"]),
+      dueDate: json["dueDate"] == null
+          ? null
+          : json["dueDate"] is Timestamp
+              ? (json["dueDate"] as Timestamp).toDate()
+              : DateTime.tryParse(json["dueDate"]),
+      uid: json["uid"],
+    );
   }
 
   Map<String, dynamic> toJson({bool firebaseFormat = false}) {

@@ -24,7 +24,7 @@ class TaskPage extends StatefulWidget {
 class _TaskPageState extends State<TaskPage> {
   late Task task;
   late TextEditingController descriptionController;
-
+  // DateTime? pickedDate;
   DateTime? newDueDate;
   bool isCompleted = false;
 
@@ -43,7 +43,7 @@ class _TaskPageState extends State<TaskPage> {
       description: descriptionController.text,
       status: task.status,
       createdDate: task.createdDate,
-      dueDate: newDueDate,
+      dueDate: newDueDate ?? task.dueDate,
       uid: task.uid,
     );
 
@@ -113,11 +113,20 @@ class _TaskPageState extends State<TaskPage> {
               },
             ),
             ElevatedButton(
-              onPressed: () {},
-              child: Text(
-                task.dueDate == null ? "Add due date" : DateFormat.yMMMEd().format(task.dueDate!),
-              ),
+              onPressed: () async {
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                setState(() {
+                  newDueDate = pickedDate;
+                });
+              },
+              child: const Text("Select Date"),
             ),
+
             // Text("Created Date: ${task.createdDate}"),
             const SizedBox(height: 16),
             const SizedBox(height: 16),
