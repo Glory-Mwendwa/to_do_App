@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:to_do/controllers/auth_controller.dart';
 import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/models/task_model.dart';
@@ -71,7 +72,6 @@ class _HomePageState extends State<HomePage> {
     final formKey = GlobalKey<FormState>();
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
-    final dueDateController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -114,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Due Date: ${dueDateController.text.isEmpty ? "Not Selected" : dueDateController.text}",
+                          "Due Date: ${pickedDate == null ? "Not Selected" : DateFormat.yMMMEd().format(pickedDate!)}",
                         ),
                         ElevatedButton(
                           onPressed: () async {
@@ -123,6 +123,11 @@ class _HomePageState extends State<HomePage> {
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now().subtract(const Duration(days: 365)),
                               lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            setModalState(
+                              () {
+                                pickedDate = pickedDate;
+                              },
                             );
                           },
                           child: const Text("Select Date"),
