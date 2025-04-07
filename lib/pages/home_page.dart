@@ -31,43 +31,6 @@ class _HomePageState extends State<HomePage> {
     taskController = Get.put(TaskController(), permanent: true);
   }
 
-  void onSave(Task updatedTask) async {
-    log("saving task: ${updatedTask.toJson()}");
-    int index = taskController.tasks.indexWhere((e) => e.id == updatedTask.id);
-    setState(() {
-      taskController.tasks[index] = updatedTask;
-    });
-    await taskController.updateTask(updatedTask);
-  }
-
-  void onItemStatusChange(String id, bool val) async {
-    log("item $id status changed to $val ");
-    String newStatus = val ? "complete" : "incomplete";
-    int index = taskController.tasks.indexWhere((e) => e.id == id);
-    Task t = taskController.tasks[index];
-    t.status = newStatus;
-
-    taskController.changeStatus(id, val);
-
-    if (index != -1) {
-      setState(() {
-        t.status = newStatus;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("The task is $newStatus"),
-          backgroundColor: newStatus == "complete" ? Colors.green : Colors.redAccent,
-        ),
-      );
-    }
-  }
-
-  void onItemDelete(String taskId) async {
-    await taskController.deleteTask(taskId);
-    taskController.tasks.removeWhere((task) => task.id == taskId);
-  }
-
   void addNewTask() {
     final formKey = GlobalKey<FormState>();
     final titleController = TextEditingController();
@@ -141,7 +104,7 @@ class _HomePageState extends State<HomePage> {
                           String description = descriptionController.text.trim();
                           DateTime createdDate = DateTime.now();
 
-                          Task newTask = Task(
+                          TaskItem newTask = TaskItem(
                             id: Uuid().v4(),
                             title: title,
                             description: description,
@@ -150,7 +113,9 @@ class _HomePageState extends State<HomePage> {
                             dueDate: pickedDate,
                           );
 
-                          await taskController.uploadMyTask(newTask);
+                          await taskController.uploadMyTask(newTask, null).catchError((e, s) {
+                            log("There was an error uploading the task. $e\n$s");
+                          });
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -252,15 +217,6 @@ class _HomePageState extends State<HomePage> {
                   .map(
                     (item) => ToDoListItem(
                       task: item,
-                      onStatusChange: (String id, bool val) {
-                        onItemStatusChange(item.id!, val);
-                      },
-                      onDelete: () {
-                        onItemDelete(item.id!);
-                      },
-                      onSave: (t) {
-                        onSave(t);
-                      },
                     ),
                   )
                   .toList(),

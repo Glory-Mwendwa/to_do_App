@@ -6,7 +6,7 @@ import 'package:to_do/models/task_model.dart';
 
 class FirebaseApis {
   static final db = FirebaseFirestore.instance;
-  static Future<Task> uploadMyTask(Task task) async {
+  static Future<TaskItem> uploadMyTask(TaskItem task) async {
     final authController = AuthController.to;
     Map<String, dynamic> t = task.toJson();
     if (authController.user.value == null) {

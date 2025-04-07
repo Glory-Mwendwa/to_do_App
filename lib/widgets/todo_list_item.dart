@@ -1,24 +1,20 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/model_jsons/task_page.dart';
 import 'package:to_do/models/task_model.dart';
 
 class ToDoListItem extends StatelessWidget {
-  final Task task;
-  final Function(String, bool) onStatusChange;
-  final Function() onDelete;
-  final Function(Task) onSave;
+  final TaskItem task;
 
   const ToDoListItem({
     super.key,
     required this.task,
-    required this.onStatusChange,
-    required this.onDelete,
-    required this.onSave,
   });
 
   @override
   Widget build(BuildContext context) {
+    final taskController = TaskController.to;
     return ListTile(
       onTap: () {
         log("clicked on item ${task.id}");
@@ -26,20 +22,13 @@ class ToDoListItem extends StatelessWidget {
           MaterialPageRoute(
               builder: (context) => TaskPage(
                     importedTask: task,
-                    onSave: (t) => onSave(t),
-                    onDelete: (Task) {
-                      onDelete();
-                    },
-                    onStatusChange: (id, val) {
-                      onStatusChange(id, val);
-                    },
                   )),
         );
       },
       leading: Checkbox(
         value: task.status == "complete",
         onChanged: (val) {
-          onStatusChange(task.id!, val ?? false);
+          taskController.changeStatus(task.id!, val ?? false);
         },
       ),
       title: Row(
@@ -59,7 +48,9 @@ class ToDoListItem extends StatelessWidget {
         maxLines: 2,
       ),
       trailing: IconButton(
-        onPressed: onDelete,
+        onPressed: () {
+          taskController.deleteTask(task.id!);
+        },
         icon: const Icon(
           Icons.delete,
           color: Colors.red,

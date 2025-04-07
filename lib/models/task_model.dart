@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Task {
+class TaskItem {
   String? id;
   String title;
   String? description;
@@ -9,7 +9,7 @@ class Task {
   DateTime? dueDate;
   String? uid;
 
-  Task({
+  TaskItem({
     this.id,
     required this.title,
     this.description,
@@ -19,8 +19,8 @@ class Task {
     this.uid,
   });
 
-  factory Task.fromMap(Map<String, dynamic> json) {
-    return Task(
+  factory TaskItem.fromMap(Map<String, dynamic> json) {
+    return TaskItem(
       id: json["id"],
       title: json["title"],
       description: json["description"],

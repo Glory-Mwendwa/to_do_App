@@ -1,15 +1,18 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:to_do/controllers/auth_controller.dart';
 import 'package:to_do/models/task_model.dart';
 
 class TaskController extends GetxController {
   static TaskController get to => Get.find();
 
-  final tasks = <Task>[].obs;
+  final tasks = <TaskItem>[].obs;
 
   @override
   void onInit() async {
@@ -18,10 +21,10 @@ class TaskController extends GetxController {
   }
 
   //  TODO 1 : Move Uploadtask function here
-  Future<Task> uploadMyTask(Task task) async {
+  Future<TaskItem> uploadMyTask(TaskItem task, XFile? image) async {
     final db = FirebaseFirestore.instance;
     final authController = AuthController.to;
-    Map<String, dynamic> t = task.toJson();
+    //Map<String, dynamic> t = task.toJson();
     if (authController.user.value == null) {
       throw "User not found";
     }
@@ -36,7 +39,9 @@ class TaskController extends GetxController {
 
   Future<void> deleteTask(String taskId) async {
     final db = FirebaseFirestore.instance;
-    await db.collection("tasks").doc(taskId).delete();
+    await db.collection("tasks").doc(taskId).delete().then((value) {
+      tasks.removeWhere((task) => task.id == taskId);
+    });
     log("Task $taskId deleted successfully");
   }
 
@@ -48,7 +53,7 @@ class TaskController extends GetxController {
     });
   }
 
-  Future<void> updateTask(Task updatedTask) async {
+  Future<void> updateTask(TaskItem updatedTask) async {
     await FirebaseFirestore.instance.collection("tasks").doc(updatedTask.id).update({
       "title": updatedTask.title,
       "description": updatedTask.description,
@@ -62,10 +67,10 @@ class TaskController extends GetxController {
     log("Task updated successfully in Firestore");
   }
 
-  static Future<List<Task>> fetchUserTasks() async {
+  static Future<List<TaskItem>> fetchUserTasks() async {
     final db = FirebaseFirestore.instance;
     final user = FirebaseAuth.instance.currentUser;
-    List<Task> t = [];
+    List<TaskItem> t = [];
     if (user == null) {
       throw Exception("Cannot fetch docs for anonymous user");
     }
@@ -73,7 +78,7 @@ class TaskController extends GetxController {
       (querySnapshot) {
         log(user.uid);
         log("Successfully completed: ${querySnapshot.size}");
-        t = querySnapshot.docs.map((e) => Task.fromMap(e.data())).toList();
+        t = querySnapshot.docs.map((e) => TaskItem.fromMap(e.data())).toList();
         for (var docSnapshot in querySnapshot.docs) {
           log('${docSnapshot.id} => ${docSnapshot.data()}');
         }
@@ -82,5 +87,19 @@ class TaskController extends GetxController {
     );
 
     return t;
+  }
+
+  Future<void> uploadFile({required String taskId, required String filePath}) async {
+    final storageRef = FirebaseStorage.instanceFor(bucket: "gs://smokeless-todo.firebasestorage.app").ref();
+
+    final fileName = filePath.split('/').last;
+    final taskFolderRef = storageRef.child("tasks/$taskId/$fileName");
+
+    await taskFolderRef.putFile(File(filePath)).then((v) {
+      log("Upload Successful");
+      // ignore: invalid_return_type_for_catch_error
+    }).catchError((e, s) => {
+          log("Error uploading: $e\n$s"),
+        });
   }
 }

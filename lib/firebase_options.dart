@@ -50,11 +50,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBQLURMIZ3NKiORl2pHc-VfmNgAx62XCxQ',
-    appId: '1:508906091320:android:e75bec65c91e2a6f2dc7cd',
-    messagingSenderId: '508906091320',
-    projectId: 'smokeless-to-do-729b4',
-    storageBucket: 'smokeless-to-do-729b4.firebasestorage.app',
+    apiKey: 'AIzaSyAw1A2mjLWd6u4d6QhTHWb5wRbvQmWdIlM',
+    appId: '1:60715658380:android:474e83b2dde186bb831fa9',
+    messagingSenderId: '60715658380',
+    projectId: 'smokeless-todo',
+    storageBucket: 'smokeless-todo.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

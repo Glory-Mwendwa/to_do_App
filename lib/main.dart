@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:to_do/controllers/auth_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:to_do/pages/sign_in_page.dart';
-import 'package:to_do/themes/global_themes.dart';
+import 'package:to_do/theme/theme.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -24,7 +24,8 @@ class MyApp extends StatelessWidget {
     Get.put(AuthController());
     return GetMaterialApp(
       title: 'Smokeless-to-do',
-      theme: MyAppTheme.lightTheme,
+      theme: lightTheme,
+      darkTheme: darkTheme,
       home: const SignInPage(),
     );
   }
