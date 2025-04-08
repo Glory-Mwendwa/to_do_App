@@ -8,6 +8,7 @@ class TaskItem {
   DateTime createdDate;
   DateTime? dueDate;
   String? uid;
+  List<String> attachments;
 
   TaskItem({
     this.id,
@@ -17,6 +18,7 @@ class TaskItem {
     required this.createdDate,
     this.dueDate,
     this.uid,
+    this.attachments = const [],
   });
 
   factory TaskItem.fromMap(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class TaskItem {
               ? (json["dueDate"] as Timestamp).toDate()
               : DateTime.tryParse(json["dueDate"]),
       uid: json["uid"],
+      attachments: json["attachments"] == null ? [] : List<String>.from(json["attachments"].map((e) => e.toString())),
     );
   }
 
@@ -50,6 +53,7 @@ class TaskItem {
               : Timestamp.fromDate(dueDate!)
           : dueDate?.toIso8601String(),
       "uid": uid,
+      "attachments": attachments,
     };
   }
 }

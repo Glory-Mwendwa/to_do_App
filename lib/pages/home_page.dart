@@ -113,7 +113,7 @@ class _HomePageState extends State<HomePage> {
                             dueDate: pickedDate,
                           );
 
-                          await taskController.uploadMyTask(newTask, null).catchError((e, s) {
+                          await taskController.uploadMyTask(newTask, []).catchError((e, s) {
                             log("There was an error uploading the task. $e\n$s");
                           });
 

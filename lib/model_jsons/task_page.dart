@@ -67,6 +67,7 @@ class _TaskPageState extends State<TaskPage> {
     );
 
     onSave(updatedTask);
+
     log("Updated task: ${updatedTask.toJson()}");
   }
 
@@ -76,7 +77,8 @@ class _TaskPageState extends State<TaskPage> {
     setState(() {
       taskController.tasks[index] = updatedTask;
     });
-    await taskController.updateTask(updatedTask);
+    await taskController.uploadMyTask(updatedTask, selectedFiles);
+    log("Task ${updatedTask.id} saved");
   }
 
   void deleteTask(String id) async {
@@ -260,19 +262,50 @@ class _TaskPageState extends State<TaskPage> {
                         return Container(
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           constraints: const BoxConstraints(maxHeight: 200),
-                          child: Image.file(File(e.path)),
+                          child: Row(
+                            children: [
+                              const Spacer(),
+                              Image.file(File(e.path)),
+                              const Spacer(),
+                              IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedFiles.removeWhere((e2) => e2.path == e.path);
+                                    });
+                                  },
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: Colors.red.shade900,
+                                  ))
+                            ],
+                          ),
                         );
 
                       case "application":
                       case "audio":
                         return Container(
                           margin: const EdgeInsets.symmetric(vertical: 3),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(7),
                             border: Border.all(color: Colors.black54),
                           ),
-                          child: Text(e.path.split("/").last),
+                          child: Row(
+                            children: [
+                              Text(e.path.split("/").last),
+                              const Spacer(),
+                              IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedFiles.removeWhere((e2) => e2.path == e.path);
+                                    });
+                                  },
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: Colors.red.shade900,
+                                  ))
+                            ],
+                          ),
                         );
                       default:
                         return Container(

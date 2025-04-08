@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:to_do/controllers/auth_controller.dart';
 import 'package:to_do/models/task_model.dart';
 
@@ -21,7 +20,7 @@ class TaskController extends GetxController {
   }
 
   //  TODO 1 : Move Uploadtask function here
-  Future<TaskItem> uploadMyTask(TaskItem task, XFile? image) async {
+  Future<TaskItem> uploadMyTask(TaskItem task, List<File> files) async {
     final db = FirebaseFirestore.instance;
     final authController = AuthController.to;
     //Map<String, dynamic> t = task.toJson();
@@ -29,8 +28,31 @@ class TaskController extends GetxController {
       throw "User not found";
     }
     task.uid = authController.user.value!.uid;
-    DocumentReference ref = db.collection("tasks").doc();
+
+    late DocumentReference ref;
+
+    if (task.id == null) {
+      ref = db.collection("tasks").doc();
+    } else {
+      ref = db.collection("tasks").doc(task.id);
+    }
+
     task.id = ref.id;
+
+    List<String> urls = [];
+    for (File file in files) {
+      String? url = await uploadFile(taskId: task.id!, file: file);
+      if (url == null || url.isEmpty) {
+        continue;
+      }
+      urls.add(url);
+    }
+
+    if (task.attachments.isEmpty) {
+      task.attachments = [];
+    }
+    task.attachments.addAll(urls);
+
     await ref.set(task.toJson(firebaseFormat: true)).then((v) => log("Upload task ${task.id}: ${task.title}"));
     tasks.add(task);
 
@@ -51,20 +73,6 @@ class TaskController extends GetxController {
     await db.collection("tasks").doc(taskId).update({
       "status": newStatus,
     });
-  }
-
-  Future<void> updateTask(TaskItem updatedTask) async {
-    await FirebaseFirestore.instance.collection("tasks").doc(updatedTask.id).update({
-      "title": updatedTask.title,
-      "description": updatedTask.description,
-      "status": updatedTask.status,
-      "dueDate": updatedTask.dueDate?.toIso8601String(),
-      "createdDate": updatedTask.createdDate,
-      "id": updatedTask.id,
-      "uid": updatedTask.uid,
-    });
-
-    log("Task updated successfully in Firestore");
   }
 
   static Future<List<TaskItem>> fetchUserTasks() async {
@@ -89,19 +97,25 @@ class TaskController extends GetxController {
     return t;
   }
 
-  Future<void> uploadFile({required String taskId, required String filePath}) async {
+  Future<String?> uploadFile({required String taskId, required File file}) async {
     final storageRef = FirebaseStorage.instanceFor(bucket: "gs://smokeless-todo.firebasestorage.app").ref();
 
-    final fileName = filePath.split('/').last;
+    final String fileName = file.path.split('/').last;
     final taskFolderRef = storageRef.child("tasks/$taskId/$fileName");
 
-    await taskFolderRef.putFile(File(filePath)).then((v) {
-      log("Upload Successful");
-      // ignore: invalid_return_type_for_catch_error
-    }).catchError((e, s) => {
-          log("Error uploading: $e\n$s"),
-        });
-  }
+    log("Should upload to $taskFolderRef");
 
-  Future<void> fetchFile() async {}
+    TaskSnapshot snapshot = await taskFolderRef.putFile(file).catchError((e, s) {
+      log("There was an error uploading the file. $e\n$s");
+      return;
+    });
+
+    String? downloadUrl = await snapshot.ref.getDownloadURL().catchError((e, s) {
+      log("There was an error getting the download url. $e\n$s");
+      return "";
+    });
+    log("Download url for $fileName: $downloadUrl");
+
+    return downloadUrl;
+  }
 }
