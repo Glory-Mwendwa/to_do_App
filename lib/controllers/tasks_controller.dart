@@ -102,4 +102,6 @@ class TaskController extends GetxController {
           log("Error uploading: $e\n$s"),
         });
   }
+
+  Future<void> fetchFile() async {}
 }

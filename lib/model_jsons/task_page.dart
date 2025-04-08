@@ -5,6 +5,7 @@ import 'package:get/get_state_manager/src/rx_flutter/rx_getx_widget.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:mime/mime.dart';
 import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/models/task_model.dart';
 
@@ -25,8 +26,7 @@ class _TaskPageState extends State<TaskPage> {
   late TextEditingController descriptionController;
   DateTime? newDueDate;
   bool isCompleted = false;
-  XFile? image;
-  FilePickerResult? file;
+  List<File> selectedFiles = [];
 
   @override
   void initState() {
@@ -34,17 +34,25 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<void> pickImage() async {
-    XFile? pickedImage = await ImagePicker().pickImage(source: ImageSource.gallery);
-    setState(() {
-      image = pickedImage;
-    });
+    List<XFile?> pickedImages = await ImagePicker().pickMultiImage();
+    for (var i = 0; i < pickedImages.length; i++) {
+      if (pickedImages[i] == null) {
+        continue;
+      }
+      setState(() {
+        selectedFiles.add(File(pickedImages[i]!.path));
+      });
+    }
   }
 
   Future<void> pickFile() async {
-    FilePickerResult? pickedFile = await FilePicker.platform.pickFiles();
-    setState(() {
-      file = pickedFile;
-    });
+    FilePickerResult? pickedFiles = await FilePicker.platform.pickFiles();
+    if (pickedFiles != null) {
+      List<File> files = pickedFiles.paths.map((path) => File(path!)).toList();
+      setState(() {
+        selectedFiles.addAll(files);
+      });
+    }
   }
 
   void saveTask(TaskItem task) {
@@ -94,6 +102,49 @@ class _TaskPageState extends State<TaskPage> {
       taskController.deleteTask(id);
       Navigator.pop(context);
     }
+  }
+
+  void showSelectorModal() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              height: 20,
+            ),
+            TextButton(
+              onPressed: () async {
+                log("Should allow adding a photo");
+                await pickImage();
+                Navigator.pop(context);
+              },
+              child: const Row(
+                children: [
+                  Text("Add Photo or Video"),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                log("Should allow adding a file");
+                await pickFile();
+                Navigator.pop(context);
+              },
+              child: const Row(
+                children: [
+                  Text("Add file"),
+                ],
+              ),
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -178,147 +229,80 @@ class _TaskPageState extends State<TaskPage> {
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                   ),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                        shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(
-                      Radius.circular(15),
-                    ))),
-                    onPressed: () {
-                      log("Should attach file");
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const SizedBox(
-                                height: 20,
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  log("Should allow adding a photo");
-                                  await pickImage();
-                                },
-                                child: const Row(
-                                  children: [
-                                    Text("Add Photo or Video"),
-                                  ],
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  log("Should allow adding a file");
-                                  await pickFile();
-                                },
-                                child: const Row(
-                                  children: [
-                                    Text("Add file"),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 20,
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    child: Container(
-                      alignment: Alignment.center,
-                      constraints: const BoxConstraints(
-                        minHeight: 140,
+                  if (selectedFiles.isEmpty)
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(
+                        Radius.circular(15),
+                      ))),
+                      onPressed: () {
+                        log("Should attach file");
+                        showSelectorModal();
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        constraints: const BoxConstraints(
+                          minHeight: 140,
+                        ),
+                        child: Icon(
+                          MdiIcons.fileUpload,
+                          size: 42,
+                        ),
                       ),
-                      child: image != null
-                          ? Image.file(
-                              File(image!.path),
-                              height: 200,
-                            )
-                          : file != null
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(MdiIcons.fileDocument, size: 48),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      file!.files.first.name,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                  ],
-                                )
-                              : Icon(
-                                  MdiIcons.fileUpload,
-                                  size: 42,
-                                ),
                     ),
-                  ),
+                  ...selectedFiles.map((e) {
+                    final mimeType = lookupMimeType(e.path);
+                    String? fileType = mimeType?.split("/").first;
+
+                    switch (fileType) {
+                      case "image":
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          child: Image.file(File(e.path)),
+                        );
+
+                      case "application":
+                      case "audio":
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(7),
+                            border: Border.all(color: Colors.black54),
+                          ),
+                          child: Text(e.path.split("/").last),
+                        );
+                      default:
+                        return Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.black54),
+                          ),
+                          child: const Text("Unsupported File Type"),
+                        );
+                    }
+                  }),
 
                   // Text("Created Date: ${task.createdDate}"),
                   const SizedBox(height: 16),
                   const SizedBox(height: 16),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: 25,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        log("Should add another photo or file");
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                                TextButton(
-                                  onPressed: () async {
-                                    log("Should allow adding a photo");
-                                    await pickImage();
-                                  },
-                                  child: const Row(
-                                    children: [
-                                      Text("Add Photo or Video"),
-                                    ],
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () async {
-                                    log("Should allow adding a file");
-                                    await pickFile();
-                                  },
-                                  child: const Row(
-                                    children: [
-                                      Text("Add file"),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      child: const Text("Add another Item"),
+                  if (selectedFiles.isNotEmpty)
+                    SizedBox(
+                      width: 25,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          log("Should add another photo or file");
+                          showSelectorModal();
+                        },
+                        child: const Text("Add another Item"),
+                      ),
                     ),
-                  ),
                   Center(
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (image != null) {
-                          await taskController.uploadFile(taskId: task.id!, filePath: image!.path);
-                          log("Image uploaded!");
-                        }
-
-                        if (file != null) {
-                          await taskController.uploadFile(taskId: task.id!, filePath: file!.files.first.path!);
-                          log("File uploaded!");
-                        }
-
                         saveTask(task);
                         Navigator.pop(context);
                       },
