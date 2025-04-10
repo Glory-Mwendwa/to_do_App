@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:to_do/controllers/auth_controller.dart';
@@ -9,7 +10,6 @@ import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/models/task_model.dart';
 import 'package:to_do/pages/my_account_page.dart';
 import 'package:to_do/widgets/todo_list_item.dart';
-import 'package:uuid/uuid.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,6 +25,7 @@ class _HomePageState extends State<HomePage> {
 
   late TaskController taskController;
 
+  @override
   void initState() {
     super.initState();
     log("Message been initialized");
@@ -105,7 +106,6 @@ class _HomePageState extends State<HomePage> {
                           DateTime createdDate = DateTime.now();
 
                           TaskItem newTask = TaskItem(
-                            id: Uuid().v4(),
                             title: title,
                             description: description,
                             status: "incomplete",
@@ -150,7 +150,7 @@ class _HomePageState extends State<HomePage> {
             child: PopupMenuButton(
               onSelected: (value) {
                 if (value == 'My Account') {
-                  Get.to(() => MyAccountPage());
+                  Get.to(() => const MyAccountPage());
                 } else if (value == 'logout') {
                   showDialog(
                       context: context,
@@ -212,6 +212,21 @@ class _HomePageState extends State<HomePage> {
       body: GetX<TaskController>(
           init: TaskController(),
           builder: (tasksController) {
+            if (tasksController.isFetchingTasks.value) {
+              return Center(
+                child: SpinKitFadingFour(
+                  size: 44,
+                  color: Colors.amber.shade700,
+                ),
+              );
+            }
+            if (tasksController.tasks.isEmpty) {
+              return const Center(
+                child: Text(
+                  "Nothing yet",
+                ),
+              );
+            }
             return ListView(
               children: tasksController.tasks
                   .map(

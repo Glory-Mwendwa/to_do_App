@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/model_jsons/task_page.dart';
@@ -33,13 +34,19 @@ class ToDoListItem extends StatelessWidget {
       ),
       title: Row(
         children: [
-          Expanded(
-            child: Text(
-              task.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text(
+            task.title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
           ),
+          if (kDebugMode)
+            Text(
+              "(${task.id!.substring(0, 4)})",
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            )
         ],
       ),
       subtitle: Text(

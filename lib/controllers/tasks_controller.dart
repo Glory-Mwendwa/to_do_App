@@ -11,6 +11,10 @@ import 'package:to_do/models/task_model.dart';
 class TaskController extends GetxController {
   static TaskController get to => Get.find();
 
+  final isFetchingTasks = false.obs;
+
+  final isUploadingTask = false.obs;
+
   final tasks = <TaskItem>[].obs;
 
   @override
@@ -27,6 +31,10 @@ class TaskController extends GetxController {
     if (authController.user.value == null) {
       throw "User not found";
     }
+
+    isUploadingTask.value = true;
+    update();
+
     task.uid = authController.user.value!.uid;
 
     late DocumentReference ref;
@@ -41,11 +49,11 @@ class TaskController extends GetxController {
 
     List<String> urls = [];
     for (File file in files) {
-      String? url = await uploadFile(taskId: task.id!, file: file);
-      if (url == null || url.isEmpty) {
+      String? downloadUrl = await uploadFile(taskId: task.id!, file: file);
+      if (downloadUrl == null || downloadUrl.isEmpty) {
         continue;
       }
-      urls.add(url);
+      urls.add(downloadUrl);
     }
 
     if (task.attachments.isEmpty) {
@@ -53,8 +61,20 @@ class TaskController extends GetxController {
     }
     task.attachments.addAll(urls);
 
-    await ref.set(task.toJson(firebaseFormat: true)).then((v) => log("Upload task ${task.id}: ${task.title}"));
-    tasks.add(task);
+    await ref.set(task.toJson(firebaseFormat: true)).then((v) {
+      log("Upload task ${task.id}: ${task.title}");
+      int i = tasks.indexWhere((e) => e.id == task.id);
+      if (i > -1) {
+        // Task already exists
+        tasks[i] = task;
+        update();
+      } else {
+        tasks.add(task);
+      }
+    });
+
+    isUploadingTask.value = false;
+    update();
 
     return task;
   }
@@ -75,13 +95,17 @@ class TaskController extends GetxController {
     });
   }
 
-  static Future<List<TaskItem>> fetchUserTasks() async {
+  Future<List<TaskItem>> fetchUserTasks() async {
     final db = FirebaseFirestore.instance;
     final user = FirebaseAuth.instance.currentUser;
     List<TaskItem> t = [];
     if (user == null) {
       throw Exception("Cannot fetch docs for anonymous user");
     }
+
+    isFetchingTasks.value = true;
+    update();
+
     await db.collection("tasks").where("uid", isEqualTo: user.uid).get().then(
       (querySnapshot) {
         log(user.uid);
@@ -94,6 +118,9 @@ class TaskController extends GetxController {
       onError: (e) => log("Error completing: $e"),
     );
 
+    isFetchingTasks.value = false;
+    update();
+
     return t;
   }
 
@@ -105,17 +132,58 @@ class TaskController extends GetxController {
 
     log("Should upload to $taskFolderRef");
 
-    TaskSnapshot snapshot = await taskFolderRef.putFile(file).catchError((e, s) {
+    try {
+      // 1. Upload the file
+      TaskSnapshot snapshot = await taskFolderRef.putFile(file);
+
+      // 2. Get the download URL
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      log("Download url for $fileName: $downloadUrl");
+
+      // 3. Return it
+      return downloadUrl;
+    } catch (e, s) {
+      log("There was an error uploading or fetching the URL. $e\n$s");
+      return null;
+    }
+  }
+
+  Future<String?> uploadProfile({required String userId, required File file}) async {
+    final storageRef = FirebaseStorage.instanceFor(bucket: "gs://smokeless-todo.firebasestorage.app").ref();
+
+    final String extension = file.path.split('.').last;
+
+    final String fileName = "profile.$extension";
+
+    final profileRef = storageRef.child("img/users/$userId/$fileName");
+
+    log("Should upload to $profileRef");
+
+    try {
+      TaskSnapshot snapshot = await profileRef.putFile(file);
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      log("Download url for $fileName: $downloadUrl");
+      return downloadUrl;
+    } catch (e, s) {
       log("There was an error uploading the file. $e\n$s");
-      return;
-    });
+      return null;
+    }
+  }
 
-    String? downloadUrl = await snapshot.ref.getDownloadURL().catchError((e, s) {
-      log("There was an error getting the download url. $e\n$s");
-      return "";
-    });
-    log("Download url for $fileName: $downloadUrl");
+  Future<void> uploadUserDetails(User user, String downloadUrl) async {
+    final db = FirebaseFirestore.instance;
 
-    return downloadUrl;
+    await FirebaseAuth.instance.currentUser!.updatePhotoURL(downloadUrl);
+
+    DocumentReference ref = db.collection("users").doc(user.uid);
+
+    return await ref.set({
+      "uid": user.uid,
+      "displayName": user.displayName,
+      "email": user.email,
+      "photoUrl": downloadUrl,
+      "creationTime": user.metadata.creationTime,
+    }, SetOptions(merge: true));
   }
 }

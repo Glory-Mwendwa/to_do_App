@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
 import 'package:sign_in_button/sign_in_button.dart';
 import 'package:to_do/controllers/auth_controller.dart';
@@ -17,10 +18,9 @@ class SignInPage extends StatelessWidget {
           builder: (authController) {
             return Center(
               child: authController.isLoadingAuth.value
-                  ? const SizedBox(
-                      height: 50,
-                      width: 50,
-                      child: CircularProgressIndicator(),
+                  ? SpinKitFadingFour(
+                      size: 44,
+                      color: Colors.amber.shade700,
                     )
                   : SafeArea(
                       child: Column(
