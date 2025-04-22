@@ -54,15 +54,6 @@ class ToDoListItem extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         maxLines: 2,
       ),
-      trailing: IconButton(
-        onPressed: () {
-          taskController.deleteTask(task.id!);
-        },
-        icon: const Icon(
-          Icons.delete,
-          color: Colors.red,
-        ),
-      ),
     );
   }
 }

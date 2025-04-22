@@ -10,6 +10,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:mime/mime.dart';
 import 'package:to_do/controllers/tasks_controller.dart';
 import 'package:to_do/models/task_model.dart';
+import 'package:to_do/widgets/cloud_file_widget.dart';
 
 class TaskPage extends StatefulWidget {
   final TaskItem importedTask;
@@ -29,10 +30,22 @@ class _TaskPageState extends State<TaskPage> {
   DateTime? newDueDate;
   bool isCompleted = false;
   List<File> selectedFiles = [];
+  List<File> cloudFiles = [];
+  List<File> downloadedFiles = [];
 
   @override
   void initState() {
     super.initState();
+    taskController.downloadTaskFiles(taskId: widget.importedTask.id!).then((files) {
+      setState(() {
+        cloudFiles = files;
+      });
+      cloudFiles.forEach((file) {
+        log("File ${file.path.split("/").last}: ${file.path}");
+      });
+    }).catchError((e) {
+      log("Error fetching task files: $e");
+    });
   }
 
   Future<void> pickImage() async {
@@ -262,8 +275,9 @@ class _TaskPageState extends State<TaskPage> {
                           ),
                         ),
                       ),
-                    ...widget.importedTask.attachments.map((url) {
-                      final mimeType = lookupMimeType(url);
+                    ...cloudFiles.map((e) => CloudFileWidget(cloudFile: e, task: task)),
+                    ...selectedFiles.map((e) {
+                      final mimeType = lookupMimeType(e.path);
                       String? fileType = mimeType?.split("/").first;
 
                       switch (fileType) {
@@ -274,12 +288,12 @@ class _TaskPageState extends State<TaskPage> {
                             child: Row(
                               children: [
                                 const Spacer(),
-                                Image.file(File(url)),
+                                Image.file(File(e.path)),
                                 const Spacer(),
                                 IconButton(
                                     onPressed: () {
                                       setState(() {
-                                        widget.importedTask.attachments.remove(url);
+                                        selectedFiles.removeWhere((e2) => e2.path == e.path);
                                       });
                                     },
                                     icon: Icon(
@@ -301,12 +315,12 @@ class _TaskPageState extends State<TaskPage> {
                             ),
                             child: Row(
                               children: [
-                                Text(url.split("/").last),
+                                Text(e.path.split("/").last),
                                 const Spacer(),
                                 IconButton(
                                     onPressed: () {
                                       setState(() {
-                                        widget.importedTask.attachments.remove(url);
+                                        selectedFiles.removeWhere((e2) => e2.path == e.path);
                                       });
                                     },
                                     icon: Icon(

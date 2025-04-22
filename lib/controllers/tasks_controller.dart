@@ -3,10 +3,13 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:to_do/controllers/auth_controller.dart';
 import 'package:to_do/models/task_model.dart';
+import 'package:to_do/utils/show_toast.dart';
 
 class TaskController extends GetxController {
   static TaskController get to => Get.find();
@@ -21,6 +24,32 @@ class TaskController extends GetxController {
   void onInit() async {
     super.onInit();
     tasks.value = await fetchUserTasks();
+
+    // final notificationSettings = await FirebaseMessaging.instance.requestPermission(provisional: true);
+
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      log("📱 FCM Token: $fcmToken");
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .update({'fcmToken': fcmToken}).then((v) {
+        log("Updated fcmToken");
+      });
+    }
+    FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) async {
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null) {
+        await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
+          'fcmToken': fcmToken,
+        }, SetOptions(merge: true));
+      }
+      log("🔄 FCM token updated in Firestore: $fcmToken");
+    }).onError((err) {
+      log("Error catching listener");
+    });
   }
 
   //  TODO 1 : Move Uploadtask function here
@@ -63,6 +92,7 @@ class TaskController extends GetxController {
 
     await ref.set(task.toJson(firebaseFormat: true)).then((v) {
       log("Upload task ${task.id}: ${task.title}");
+      showToast(title: "Task Uploaded Successfully", type: ToastType.success);
       int i = tasks.indexWhere((e) => e.id == task.id);
       if (i > -1) {
         // Task already exists
@@ -92,7 +122,13 @@ class TaskController extends GetxController {
     String newStatus = val ? "complete" : "incomplete";
     await db.collection("tasks").doc(taskId).update({
       "status": newStatus,
+    }).then((v) {
+      int i = tasks.indexWhere((t) => t.id == taskId);
+      tasks[i].status = newStatus;
+      tasks[i] = tasks[i];
     });
+
+    update();
   }
 
   Future<List<TaskItem>> fetchUserTasks() async {
@@ -185,5 +221,29 @@ class TaskController extends GetxController {
       "photoUrl": downloadUrl,
       "creationTime": user.metadata.creationTime,
     }, SetOptions(merge: true));
+  }
+
+  Future<List<File>> downloadTaskFiles({required String taskId}) async {
+    final storageRef = FirebaseStorage.instanceFor(bucket: "gs://smokeless-todo.firebasestorage.app").ref();
+    final taskFolderRef = storageRef.child("tasks/$taskId");
+
+    List<File> files = [];
+
+    await taskFolderRef.listAll().then((result) async {
+      // Log each file in the folder
+      for (var item in result.items) {
+        log("Item: ${item.name}");
+      }
+      for (var item in result.items) {
+        log("TaskController => Item: ${item.name}");
+        // Get the File from the item
+        final appDocDir = await getApplicationDocumentsDirectory();
+        final filePath = "${appDocDir.absolute}/tasks/$taskId/${item.name}";
+        final file = File(filePath);
+        files.add(file);
+      }
+    });
+
+    return files;
   }
 }
